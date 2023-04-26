@@ -1,18 +1,24 @@
-import time
-
 import requests
 from bs4 import BeautifulSoup as b
 import telebot
+from auth_info import TOKEN
 
-TOKEN="6113685540:AAFL-yuCDtErkyI0j8dAwGbMDNtS9GoRt2U"
+
 URL = 'https://knastu.ru/'
 
 
 def parser(url):
     r = requests.get(url)
     soup = b(r.text, 'html.parser')
-    news = soup.find_all('div', class_='post-text-excerpt')
-    return [i.text for i in news]
+    news_ = soup.find_all('div', class_='post-text-excerpt')
+    return [i.text for i in news_]
+
+
+def parser2(url):
+    r = requests.get(url)
+    soup = b(r.text, 'html.parser')
+    all_news_ = soup.find_all('div', class_='block-wrap')
+    return [i.text for i in all_news_]
 
 
 class Queue:
@@ -33,12 +39,24 @@ class Queue:
 
 
 list_of_news = parser(URL)
+list_of_all_news = parser2(URL)
 bot = telebot.TeleBot(TOKEN)
 
 
 @bot.message_handler(commands=['start'])
 def hello(message):
-    bot.send_message(message.chat.id, 'Здравствуйте, чтобы узнать последние новости университета, введите цифру от 1 до 5:')
+    bot.send_message(message.chat.id, 'Здравствуйте, чтобы узнать последние новости университета, введите цифру от 1 '
+                                      'до 5:')
+
+
+@bot.message_handler(commands=['news'])
+def all_news(message):
+    x = 0
+    for i in list_of_all_news:
+        if x < 5:
+            bot.send_message(message.chat.id, i)
+            x += 1
+    bot.send_message(message.chat.id, 'Информация взята с сайта: {}'.format(URL))
 
 
 @bot.message_handler(content_types=['text'])
@@ -49,9 +67,12 @@ def news(message):
         out = q.dequeue()
         if out in ['1', '2', '3', '4', '5']:
             bot.send_message(message.chat.id,list_of_news[int(out)-1]+'{}'.format(URL))
-            #del list_of_news[0]
         else:
-            bot.send_message(message.chat.id,'Наш бот предоставляет только самые свежие новости! (Введите цифру от 1 до 5):')
+            bot.send_message(message.chat.id,'Наш бот предоставляет только самые свежие новости! (Введите цифру от 1 '
+                                             'до 5):')
 
 
-bot.polling()
+
+
+if __name__ == '__main__':
+    bot.polling()
